@@ -60,60 +60,60 @@ if __name__ == '__main__':
     # Download data if it is unavailable.
     download_data()
 
-    # Испортируем датафрейм с нашими данными, помещаем в У наши метки, а в Х - все остальные столбцы
+    # Import the dataframe with our data, place the labels in Y, and all other columns in X
     df = pd.read_csv("../Data/house_class.csv")
     X = df.iloc[:, 1:]
     Y = df.loc[:, "Price"]
 
-    # Делим данные на тренировочноые и тестовые (30% - тестовых, параметр - test_size),
-    # при этом благодаря: stratify = X['Zip_loc'].values, мы делим данные равномерно,
-    # так чтоб в обучающем наборе мы видели все возможные значения в столбце Zip_loc.
-    # При этом в таком же пропорциональном соотношении (70 на 30)
-    # Например встречается во всем датафрейме в столбце Zip_loc значение АЕ - 10 раз,
-    # Параметр stratify сделает так, чтоб в обучающем наборе оно встречалось 7 раз, а в тестовом - 3
+    # Split the data into training and test sets (30% for testing, parameter - test_size),
+    # Thanks to stratify=X['Zip_loc'].values, we split the data evenly
+    # so that in the training set we see all possible values in the Zip_loc column.
+    # The same proportional ratio (70 to 30) is maintained.
+    # For example, if the value AE appears 10 times in the entire dataframe in the Zip_loc column,
+    # the stratify parameter ensures it appears 7 times in the training set and 3 times in the test set.
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, stratify=X['Zip_loc'].values,
                                                         random_state=1)
 
-    # Создаем список со всеми преобразователями, которые мы будем тестировать
+    # Create a list of all encoders to be tested
     encoders = [
         OneHotEncoder(),
         OrdinalEncoder(),
         TargetEncoder(cols=['Zip_area', 'Zip_loc', 'Room'])
     ]
 
-    # Создаем список с 3 уникальными экземплярами модели. Создаем 3 одинаковые и отдельные для качества эксперемента.
+    # Create a list of 3 unique instances of the model. Create 3 identical and separate ones for experimental quality.
     models = [
         DecisionTreeClassifier(criterion="entropy", max_features=3, splitter="best", max_depth=6,
                                min_samples_split=4,
                                random_state=3)
     ] * 3
 
-    # Создаем список со всеми имена преобразователей, чтоб отобразить ответ в том виде, как сказано в ТЗ
+    # Create a list of encoder names to display the response in the format specified in the task
     encoder_names = [
         "OneHotEncoder",
         "OrdinalEncoder",
         "TargetEncoder"
     ]
 
-    # Запускаем цикл, в котором мы обучим модель для каждого преобразователя
+    # Run a loop where we train the model for each encoder
     # (OneHotEncoder, OrdinalEncoder, TargetEncoder)
-    # Тестирование данных с разными преобразователями помогает найти оптимальное решение конкретно в нашем случае
-    # Преобразователи используются для трансформации категориальных данных в числовые
-    # Каждый из 3 преобразователей имеет свой алгоритм трансформации категориальных данных
-    # Как мы видим лучше всего справляется OrdinalEncoder
+    # Testing data with different encoders helps find the optimal solution for our specific case.
+    # Encoders are used to transform categorical data into numerical data.
+    # Each of the 3 encoders has its own algorithm for transforming categorical data.
+    # As we can see, OrdinalEncoder performs best.
     for encoder, model, encoder_name in zip(encoders, models, encoder_names):
         X_train_final, X_test_final = return_final_train_and_test_set(encoder, X_train, X_test, Y_train)
         model: DecisionTreeClassifier = model.fit(X_train_final, Y_train)
         predicted_Y_test = model.predict(X_test_final)
 
-        # precision_recall_fscore_support метод для получения статистики по работе нашей модели
-        # Зачастую не достаточно лишь accurancy_score
-        # Благодаря подробной статистике мы можем улучшить модель, понять в чем ее слабые стороны
-        # Precision(точность) показывает насколько хорошо мродель умеет отличать определенный класс от других классов
-        # Формула точности = TP / (TP + FP)
-        # Recall(полнота) показывает насколько правильно алгоритм умеет определять(находить, узнавать) определенный кл.
-        # Формула точности = TP / (TP + FN)
-        # F-measure лаконично объединяет в один показатель оба из показателей выше (precision, recall)
-        # Support показывает количество появлений каждого класса в правильных тестовых метках
+        # precision_recall_fscore_support method for obtaining statistics on the performance of our model
+        # Accuracy_score alone is often not sufficient.
+        # Detailed statistics help us improve the model and understand its weaknesses.
+        # Precision indicates how well the model can distinguish a specific class from other classes.
+        # Formula for precision = TP / (TP + FP)
+        # Recall indicates how well the algorithm can identify (find, recognize) a specific class.
+        # Formula for recall = TP / (TP + FN)
+        # F-measure concisely combines both of the above metrics (precision, recall) into a single metric.
+        # Support shows the number of occurrences of each class in the correct test labels.
         precision, recall, f1_score, support = precision_recall_fscore_support(Y_test, predicted_Y_test)
         print(encoder_name + ":" + str(round(f1_score.mean(), 2)))
